@@ -1,0 +1,28 @@
+{
+  "productName": "Analyze",
+  "name": "Analyze",
+  "version": "1.0.0",
+  "description": "A demo for Electron application - analyze contents of a folder",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/electron/electron-quick-start.git"
+  },
+  "keywords": [
+    "Electron",
+    "Analayze",
+    "tutorial"
+  ],
+  "author": "GitHub",
+  "license": "CC0-1.0",
+  "bugs": {
+    "url": "https://github.com/electron/electron-quick-start/issues"
+  },
+  "homepage": "https://github.com/electron/electron-quick-start#readme",
+  "devDependencies": {
+    "electron-prebuilt": "^1.2.0"
+  }
+}

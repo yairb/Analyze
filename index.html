@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+  <head>
+	<meta charset="UTF-8">
+    <title>Analyze</title>
+    <script>if (typeof module === 'object') {window.module = module; module = undefined;}</script>
+    <script src="scripts/jquery-3.1.0.min.js"></script>
+    <script src="scripts/d3.min.js"></script>
+    <script src="scripts/d3pie.min.js"></script>
+    <script>if (window.module) module = window.module;</script>
+
+    <style type="text/css">
+		.dirButton {
+			margin-right: auto;
+			margin-left: auto;
+			width: 200px;
+			box-shadow:inset 0px 34px 0px -15px #b54b3a;
+			background-color:#a73f2d;
+			border:1px solid #241d13;
+			display:inline-block;
+			cursor:pointer;
+			color:#ffffff;
+			font-family:Arial;
+			font-size:15px;
+			font-weight:bold;
+			padding:9px 23px;
+			text-decoration:none;
+			text-shadow:0px -1px 0px #7a2a1d;
+		}
+		.dirButton:hover {
+			background-color:#b34332;
+		}
+		.dirButton:active {
+			position:relative;
+			top:1px;
+		}
+		.wrapper{
+			text-align: center;
+		}
+		#pie{
+			margin-top: 30px;
+		}
+    </style>
+  </head>
+  <body>
+	<div class="wrapper">
+		<button class="dirButton" id="select-directory">Select Directory</button>
+		<div id="pie"></div>
+	</div>
+
+	<script>
+	var fs = require('fs');
+	
+	const ipc = require('electron').ipcRenderer;
+	const selectDirBtn = document.getElementById('select-directory');
+
+	selectDirBtn.addEventListener('click', function (event) {
+	  ipc.send('open-file-dialog')
+	});
+
+	ipc.on('selected-directory', function (event, path) {
+	  initDict();
+	  readDirectory(path.toString(), function(){
+	  	showGraph(filesDict, path.toString());
+	  });
+	});
+
+	var pie = null;
+	function showGraph(dict, title){
+		var method = 'counter'; // 'size'
+		if (pie != null) {
+			pie.destroy();
+			pie = null;
+		}
+		pie = new d3pie("pie", {
+			header: {
+				title: {
+					text: title
+				}
+			},
+			data: {
+				content: [
+					{ label: "Images", value: dict.images[method] },
+					{ label: "Videos", value: dict.videos[method] },
+					{ label: "Docs", value: dict.docs[method] },
+					{ label: "Code", value: dict.code[method] },
+					{ label: "Others", value: dict.others[method] }
+				]
+			}
+		});
+	}
+
+	var filesDict;
+
+	function initDict() {
+		filesDict = {
+			counter: 0,
+			size: 0,
+			images: {
+				counter: 0,
+				size: 0
+			},
+			videos: {
+				counter: 0,
+				size: 0
+			},
+			docs: {
+				counter: 0,
+				size: 0
+			},
+			code: {
+				counter: 0,
+				size: 0
+			},
+			others: {
+				counter: 0,
+				size: 0
+			}
+		};
+	}
+
+	function bytesToSize(bytes) {
+	   var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+	   if (bytes == 0) return '0 Byte';
+	   var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+	   return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+	}
+
+	var imageFormats = ['png', 'jpg', 'gif'];
+	var videoFormats = ['avi', 'mp4', 'mkv'];
+	var docFormats = ['doc', 'docx', 'pdf', 'xls', 'ppt', 'xlsx', 'pptx'];
+	var codeFormats = ['js', 'c', 'cpp', 'm', 'java', 'py'];
+	function addFile(file, size) {
+		filesDict.counter++;
+		filesDict.size += size;
+		var ext = file.substr(file.lastIndexOf('.') + 1);
+		if (imageFormats.indexOf(ext) > -1) {
+			filesDict.images.counter++;
+			filesDict.images.size += size;
+		} else if (videoFormats.indexOf(ext) > -1){
+			filesDict.videos.counter++;
+			filesDict.videos.size += size;
+		} else if (docFormats.indexOf(ext) > -1){
+			filesDict.docs.counter++;
+			filesDict.docs.size += size;
+		} else if (codeFormats.indexOf(ext) > -1){
+			filesDict.code.counter++;
+			filesDict.code.size += size;
+		} else {
+			filesDict.others.counter++;
+			filesDict.others.size += size;
+		}
+	}
+	var pathReq = require("path");
+	function readDirectory(path, cb) {
+		fs.readdir(path, function (err, files) { // '/' denotes the root folder
+		  if (err) throw err;
+		  var counter = 0;
+		   files.forEach( function (file) {
+		     fs.lstat(path + pathReq.sep + file, function(err, stats) {
+		       if (!err && stats.isDirectory()) { //conditing for identifying folders
+		         var seperator = pathReq.sep;
+		         if (path === pathReq.sep) {
+		         	seperator = '';
+		         }
+		         readDirectory(path + seperator + file, null);
+		       }
+		       else{
+		        addFile(file, stats.size);
+		      }
+		      counter++;
+		      if (counter == files.length) {
+		      	if (cb != null) {
+					cb();
+				}
+		      }
+		     });
+		   });
+		});	
+	}
+	
+</script>
+   
+  </body>
+
+</html>
